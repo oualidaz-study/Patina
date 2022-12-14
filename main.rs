@@ -42,15 +42,21 @@ enum NodeType{
     
 }
 
-pub struct Node {
+pub struct Node<'n> {
+    frame: &'n Frame<'n>,
     name: String,
     input: Vec<Connection>,
     output: Vec<Connection>,
 }
 
-impl Node {
-    pub fn new(name: &str) -> Self {
-        Self {name: name.to_string(), input: vec![], output: vec![]}
+impl<'n> Node<'n> {
+    pub fn new(frame: &'n Frame<'n>, name: &str) -> Self {
+        Self {
+            frame: &frame,
+            name: name.to_string(), 
+            input: vec![], 
+            output: vec![]
+        }
     }
 
     pub fn connection_add(&mut self, is_output: bool, _type:ConnectionType){
@@ -64,13 +70,14 @@ impl Node {
 
     pub fn execute_task(&self){
         println!("{}", self.name);
+        self.frame.perform_function(self.name.clone());
     }
 
 }
 
 //NodeList
 pub struct NodeList<'l> {
-    list: HashMap<String, &'l Node>,
+    list: HashMap<String, &'l Node<'l>>,
 }
 
 impl<'l> NodeList<'l> {
@@ -79,11 +86,11 @@ impl<'l> NodeList<'l> {
         Self {list: HashMap::new()}
     }
 
-    pub fn add(&mut self, name: String, node: &'l Node){
+    pub fn add(&mut self, name: String, node: &'l Node<'l>){
         self.list.insert(name, node);
     }
 
-    pub fn get(&self, name: String)-> &'l Node{
+    pub fn get(&self, name: String)-> &'l Node<'l>{
         return self.list.get(&name).unwrap();
     }
 }
@@ -147,7 +154,7 @@ impl<'s> Scheduler<'s> {
     }
 
     pub fn add(&mut self, name: &str){
-        &tokens.push(Token::new(name));
+        &self.tokens.push(Token::new(name));
     }
 
     pub fn looping(&mut self){
@@ -167,13 +174,13 @@ impl<'s> Scheduler<'s> {
 }
 
 pub struct Frame<'f> {
-    scheduler: &'f Scheduler<'f>
+    scheduler: &'f mut Scheduler<'f>
 }
 
 impl<'f> Frame<'f> {
-    pub fn new(list: &'f NodeList<'f>)-> Self {
+    pub fn new(scheduler: &'f mut Scheduler<'f>)-> Self {
         Self {
-            scheduler: Scheduler::new(list),
+            scheduler: scheduler,
         }
     }
 
@@ -185,49 +192,58 @@ impl<'f> Frame<'f> {
         &self.scheduler.add("node_fork");
     }
 
+    pub fn perform_function(&mut self, name: String){
+        match name.as_str() {
+            "node_fork" => &self.fork(),
+            _ => &{}
+        };
+    }
+
 }
 
 
 //main
 
 fn main() {
-
-
+    //Setup
+    let mut main_list = NodeList::new();
+    let mut scheduler = Scheduler::new(&main_list);
+    let mut frame = Frame:: new(&mut scheduler);
 
     //Node Library
     //Event Start
-    let mut node_start = Node::new("node_start");
+    let mut node_start = Node::new(&frame, "node_start");
     node_start.connection_add(true, ConnectionType::Exec);
 
     //Fork
-    let mut node_fork = Node::new("node_fork");
+    let mut node_fork = Node::new(&frame, "node_fork");
     node_fork.connection_add(false, ConnectionType::Exec);
     node_fork.connection_add(true, ConnectionType::Exec);
     node_fork.connection_add(true, ConnectionType::Exec);
 
     //Set X Var
-    let mut var_x_set = Node::new("var_x_set");
+    let mut var_x_set = Node::new(&frame, "var_x_set");
     var_x_set.connection_add(false, ConnectionType::Exec);
     var_x_set.connection_add(false, ConnectionType::Int);
     var_x_set.connection_add(true, ConnectionType::Exec);
     var_x_set.connection_add(true, ConnectionType::Int);
 
     //Get X Var
-    let mut var_x_get = Node::new("var_x_get");
+    let mut var_x_get = Node::new(&frame, "var_x_get");
     var_x_get.connection_add(true, ConnectionType::Int);
 
     //Get Manual Value
-    let mut int_get = Node::new("int_get");
+    let mut int_get = Node::new(&frame, "int_get");
     int_get.connection_add(true, ConnectionType::Int);
 
     //Add Int
-    let mut node_add_int = Node::new("node_add_int");
+    let mut node_add_int = Node::new(&frame, "node_add_int");
     node_add_int.connection_add(false, ConnectionType::Int);
     node_add_int.connection_add(false, ConnectionType::Int);
     node_add_int.connection_add(true, ConnectionType::Int);
 
     //Print Int
-    let mut node_print_int = Node::new("node_print_int");
+    let mut node_print_int = Node::new(&frame, "node_print_int");
     node_print_int.connection_add(false, ConnectionType::Exec);
     node_print_int.connection_add(false, ConnectionType::Int);
     node_print_int.connection_add(true, ConnectionType::Exec);
@@ -244,8 +260,7 @@ fn main() {
     int_get.output[0].connect_to(node_add_int.name.clone(), 1);
     node_add_int.output[0].connect_to(var_x_set.name.clone(), 1);
 
-    //Setup Node List
-    let mut main_list = NodeList::new();
+    
     
     //Main Line
     main_list.add(node_start.name.clone(), &node_start);
@@ -254,13 +269,9 @@ fn main() {
     main_list.add(node_print_int.name.clone(), &node_print_int);
 
     //set X input evaluation
-    //main_list.add(node_int_add);
-    //main_list.add(var_x_get);
-    //main_list.add(node_val_int);
+    main_list.add(node_add_int.name.clone(), &node_add_int);
+    main_list.add(var_x_get.name.clone(), &var_x_get);
+    main_list.add(int_get.name.clone(), &int_get);
 
-    
-
-    //create Token
-    let mut scheduler = Scheduler::new(&main_list);
-    scheduler.looping();
+    frame.init();
 }
