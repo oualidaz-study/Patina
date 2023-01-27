@@ -1,11 +1,13 @@
 "use strict";
 
 import { prevent_default, prop_dev } from "svelte/internal";
+import ContextMenuNode from "$lib/contextMenu/ContextMenu.svelte";
 import * as select from "./select"
 import * as universal from "./universal"
 //canvas
 let canvas: HTMLCanvasElement
 let ctx: CanvasRenderingContext2D
+let contextMenuRef
 
 //Viewport Parameters
 export const viewportSize = {x: window.innerWidth, y: window.innerHeight};
@@ -179,4 +181,11 @@ export function adjustZoom(zoomAmount:number|null, zoomFactor?: number){
 
 export function contextMenu(e){
     e.preventDefault()
+    if (contextMenuRef == null){
+        contextMenuRef = new ContextMenuNode({
+            target: canvas.parentElement
+        })
+    }
+    
+    contextMenuRef.setPos(e)
 }
