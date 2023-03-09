@@ -1,16 +1,15 @@
 <script lang="ts">
+  import NodeSet from "$lib/Node/NodeSet.svelte";
+  import NodeGet from "$lib/Node/NodeGet.svelte";
     let MenuRef: HTMLElement
 
-    let functions = [
-        {name: "Duplicate", shortcut: "Shift D"},
-        {name: "Rename", shortcut: "F2"},
-        {name: "Delete", shortcut: "X"},
-        {name: "Copy", shortcut: "Ctrl C"},
-        {name: "Paste", shortcut: "Ctrl V"},
-        {name: "Delete with Reconnect", shortcut: "Ctrl X"},
-        {name: "Ungroup", shortcut: "Ctrl Alt G"},
-        {name: "Edit Group", shortcut: "Tab"},
-    ]
+   let Nodenames = [
+    { name: "Get", component: NodeGet},
+    { name: "Set", component: NodeSet},
+   
+   ]
+
+   
 
 
     let pos = {x: 0, y: 0};   
@@ -44,9 +43,15 @@
         MenuRef.style.display = "none"
     }
 
-    function handleButton(e: PointerEvent, name: String){
+    function handleButton(e: PointerEvent, component){
         remember =  (e.y )  - (pos.y  + 50 ) //works but prefer to have the mouse on the center of the button
         MenuRef.style.display = "none"
+        console.log("aaa")
+        let grid = document.getElementById("container")
+        let node = new component.component ({
+                target: grid
+            })
+        node.setPos(pos)
     }
 </script>
 
@@ -61,15 +66,12 @@
         class="menu"
         
     >
-
-        <p>Node Context Menu</p>
-        <hr />
-        {#each functions as f}
+        {#each Nodenames as name}
             <button 
-                on:pointerdown={(e) => handleButton(e, f.name)}
+                on:pointerdown={(e) => handleButton(e, name)}
             >
-                <div class="btnName">{f.name}</div>
-                <div class="btnShortcut">{f.shortcut}</div>
+                <div class="btnName">{name.name}</div>
+
            
 
             </button>
@@ -95,7 +97,7 @@
         font-size: 12px;
         color: #848484;
         padding: 2px;
-        width: 225px;
+        width: fit-content;
         
     }
 

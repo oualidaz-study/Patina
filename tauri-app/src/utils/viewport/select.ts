@@ -2,10 +2,12 @@
 
 import * as universal from "./universal"
 import { cameraZoom, cameraOffset } from "./grid"
-let canvas:HTMLCanvasElement
 
+let canvas:HTMLCanvasElement
+let ctx: CanvasRenderingContext2D
 export function setCanvas(_canvas: HTMLCanvasElement){
     canvas = _canvas
+    ctx = canvas.getContext("2d")!
 }
 
 export const rect = (() => {
@@ -36,6 +38,7 @@ export const rect = (() => {
             show = true;
         },
         clear(){
+            ctx
             show = false;
         },
         toRect() {

@@ -1,17 +1,17 @@
 "use strict";
 
 import { prevent_default, prop_dev } from "svelte/internal";
-import ContextMenuNode from "$lib/contextMenu/ContextMenu.svelte";
+import ContextMenuNode from "$lib/contextMenu/NodeListMenu.svelte";
 import * as select from "./select"
 import * as universal from "./universal"
 //canvas
 let canvas: HTMLCanvasElement
 let ctx: CanvasRenderingContext2D
 let contextMenuRef
+let addMenuRef
 
 //Viewport Parameters
 export const viewportSize = {x: window.innerWidth, y: window.innerHeight};
-
 
 //Camera Parameters
 export const cameraOffset = { x: viewportSize.x/2, y: viewportSize.y/2 }
@@ -48,7 +48,6 @@ export function draw(){
 
     //Update layers
     updateLayerBg()
-    updateLayerNode()
 
     select.draw()
 
@@ -188,4 +187,17 @@ export function contextMenu(e){
     }
     
     contextMenuRef.setPos(e)
+}
+
+export function addMenu(e){
+    console.log("aa")
+    if (e.keyCode != 65 || !e.shiftKey) return
+    e.preventDefault()
+    if (addMenuRef == null){
+        addMenuRef = new ContextMenuNode({
+            target: canvas.parentElement
+        })
+    }
+    
+    addMenuRef.setPos(e)
 }
