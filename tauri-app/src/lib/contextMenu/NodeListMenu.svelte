@@ -1,5 +1,7 @@
 <script lang="ts">
     import Node from "$lib/Node/Node.svelte";
+    import {NodeAdd} from "../../utils/Simulation/simulation"
+
     import {ENodeType, EConnectionType, EVariableType} from "../../utils/Node/node"
     let MenuRef: HTMLElement
 
@@ -181,13 +183,8 @@
     function handleButton(e: PointerEvent, info){
         remember =  (e.y )  - (pos.y  + 50 ) //works but prefer to have the mouse on the center of the button
         MenuRef.style.display = "none"
-        console.log("aaa")
-        let grid = document.getElementById("container")
-        let node = new Node ({
-                target: grid
-            })
-        node.setNodeData(info)
-        node.setPos(pos)
+
+        NodeAdd(info, pos)
     }
 </script>
 

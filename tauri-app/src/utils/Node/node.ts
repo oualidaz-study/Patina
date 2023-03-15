@@ -54,8 +54,6 @@ export interface SNode {
 
 export function getColour(type, colour){
 
-    console.log(type, colour, "aa")
-
     const NodeTypeMap = new Map()
 
     NodeTypeMap.set(ENodeType.Start, {
@@ -74,7 +72,6 @@ export function getColour(type, colour){
         primary: "#04c28f",
         secondary: "#04c28fac"
     })
-    console.log(colour == 0 ? NodeTypeMap.get(type).primary : NodeTypeMap.get(type).secondary)
     return colour == 0 ? NodeTypeMap.get(type).primary : NodeTypeMap.get(type).secondary
 }
 

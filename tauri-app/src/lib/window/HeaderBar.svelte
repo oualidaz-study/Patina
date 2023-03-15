@@ -1,11 +1,21 @@
 <script>
-   
+    import {SimulationStart} from "../../utils/Simulation/simulation"
+
+    function onClick(e){
+        SimulationStart()
+    }
 	
 </script>
 
 
 <hb>
-    <button>Save</button>
+    <button 
+        class="
+            bg-green-500 p-1.5 rounded-sm 
+            text-white  shadow shadow-green-300
+        "
+        on:click={(e)=>{onClick(e)}}
+    >Simulate</button>
 </hb>
     
 <style>

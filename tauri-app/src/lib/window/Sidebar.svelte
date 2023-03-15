@@ -10,8 +10,10 @@
 <vb >
     <hb>
         <button>Add</button>
-        <input>
-        <div>S</div>
+        <input
+            class = "bg-transparent ring-1 ring-black mx-2 my-1 w-[100px]" 
+        />
+        <div>Options</div>
     </hb>
     {#each panel.categories as cat}
     <div class="li" id="cat_{cat.name}">

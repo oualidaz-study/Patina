@@ -5,8 +5,10 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import Link from "./ConnectionLine.svelte";
+    import {getNode} from "../../utils/Simulation/simulation"
     import { ENodeType, EConnectionType, getColour, getConnectionColour, getConnectionShape, EVariableType} from "../../utils/Node/node"
-  import { identity } from "svelte/internal";
+    import { identity } from "svelte/internal";
+  import { get } from "svelte/store";
     //Parameters
     let self:HTMLElement
 
@@ -22,13 +24,26 @@
                 label: "Start",
                 type: EConnectionType.EXEC,
                 variable: null,
-                connectedTo: null
+                connectedTo: null,
+                linkRef: null
             },
             
         ],
     }
 
     let pos = {x: 0, y: 0}
+
+    function makeid(length) {
+        let result = '';
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        const charactersLength = characters.length;
+        let counter = 0;
+        while (counter < length) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        counter += 1;
+        }
+        return result;
+    }
     
     export function setNodeData(_data){
         data.name = _data.name
@@ -37,6 +52,13 @@
         data.outputs = _data.outputs   
     }
 
+    export function getNodeData(){
+        return data
+    }
+
+    export function getId(){
+        return self.id
+    }
     
     
     export function setPos(_pos){
@@ -47,7 +69,9 @@
     let delta = {x: 0, y: 0}
 
     function onPointerDown(e){
-        if(isLink) return
+        if(isLink) {
+            return
+        }
 
         isDragging = true
         delta.x = pos.x - e.clientX
@@ -67,6 +91,10 @@
     }
 
     function onPointerUp(e){
+        if(isLink) {
+            console.log("hey")
+            return
+        }
         isDragging = false
     }
 
@@ -77,6 +105,43 @@
     let endPos = {x: 0, y:0}
     let btnRef
     let curve
+
+    let connection = {
+        input: {
+            index: -1,
+            ref: null
+        },
+        output: {
+            index: -1,
+            ref: null
+        }
+    }
+
+    function setConnection(connectionId, node){
+        if (connectionId.includes("output")){
+            connection.output.index = Number(connectionId.replace(/\D/g,''))
+            connection.output.ref = node
+        }
+        else{
+            connection.input.index = Number(connectionId.replace(/\D/g,''))
+            connection.input.ref = node
+        }
+    }
+
+    function updateNodeConnection(linkRef){
+        const inputNode = connection.input.ref
+        
+        const outputNode = connection.output.ref
+
+        const targetInput = inputNode.getNodeData().inputs[connection.input.index]
+        const targetOuput = outputNode.getNodeData().outputs[connection.output.index]
+
+        targetInput.connectedTo = outputNode
+        targetOuput.connectedTo = inputNode
+
+        targetInput.linkRef = linkRef
+        targetOuput.linkRef = linkRef
+    }
 
     function onLinkPointerDown(e){
         isLink=true
@@ -89,8 +154,12 @@
                 target: e.target
         })
         curve.Construct(startPos.x - pos.x, startPos.y -pos.y)
+
+        const selfNode = getNode(self.id)
+
+        setConnection(btnRef.parentNode.id, selfNode)
+
         onLinkPointerMove(e, curve)
-        
         
     }
 
@@ -104,23 +173,34 @@
         
         curve.DragLine(endPos.x, endPos.y)
     }
+
+
     function onLinkPointerUp(e){
         if (!btnRef || data.outputs[0].connectedTo) return
         isLink = false
 
         if(e.target.id === "link"){
-            let other = e.target
-            data.outputs[0].connectedTo = other
-            other.style.backgroundColor= "#ffffff"
+            e.target.style.backgroundColor= "#ffffff"
+            
+            
+            let targetNode = getNode(e.target.offsetParent.id)
+            
+            setConnection(e.target.parentNode.id, targetNode)
+            console.log(connection)
+            updateNodeConnection(curve)
+            curve = null
             return
         }
-
+        
         
         btnRef.style.backgroundColor= "#110f0e"
         if(curve == null) return
 
     }
 
+    const id = data.name + '_'  + makeid(5)
+    onMount(()=>{
+    })
     
 
 </script>
@@ -134,7 +214,7 @@
 
 <button 
     bind:this={self}
-    id="main"
+    id={id}
     style:top = "{pos.y}px"
     style:left = "{pos.x}px"
     on:pointerdown={(e)=>{onPointerDown(e)}}
@@ -145,6 +225,8 @@
     class="
         absolute z-10 pb-3 min-w-[150px] w-max min-h-max
         bg-[#00000052] rounded-md drop-shadow-lg
+
+        focus:outline-none focus:ring-4 focus:ring-offset-3 focus:ring-offset-transparent focus:ring-amber-700
     "
 >   
 
@@ -178,8 +260,11 @@
     "
     >
         <div>
-            {#each data.inputs as input}
-            <div class="flex gap-2 h-6 items-between " >
+            {#each data.inputs as input, i}
+            <div 
+                id ="input_{i}"
+                class="flex gap-2 h-6 items-between " 
+            >
                 <button
                     id="link"
                     class="exec place-self-center"
@@ -194,12 +279,15 @@
                 </p>
                 {#if input.variable}
                     {#if input.variable.type == EVariableType.BOOLEAN}
-                    <input type="checkbox" value= {input.variable.value}>
+                    <input 
+                        type="checkbox" 
+                        bind:checked={input.variable.value}
+                    >
                     {/if}
                     {#if input.variable.type == EVariableType.STRING}
                     <input 
                         type="text" 
-                        value= {input.variable.value}
+                        bind:value= {input.variable.value}
                         class="
                             w-12 bg-[#0000001f] rounded-sm
                             outline outline-1 outline-slate-400
@@ -232,8 +320,11 @@
         {/if}
         
         <div>
-            {#each data.outputs as output}
-            <div class="flex flex-row-reverse gap-2 items-between ">
+            {#each data.outputs as output, i}
+            <div
+                id ="output_{i}" 
+                class="flex flex-row-reverse gap-2 items-between "
+            >
                 <button
                     id="link"
                     class="exec place-self-center"

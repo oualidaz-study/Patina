@@ -6,12 +6,12 @@
   import ResultsCompiler from "$lib/window/ResultsCompiler.svelte";
   import Sidebar from "$lib/window/Sidebar.svelte";
   import { onMount } from "svelte/internal";
+  import {NodeAdd} from "../utils/Simulation/simulation"
 
   onMount(()=>{
-    let grid = document.getElementById("container")
-    let NodeStart = new Node ({
-                target: grid
-            })
+
+    NodeAdd(null, {x: 275, y: 100})
+
   })
 
 </script>
