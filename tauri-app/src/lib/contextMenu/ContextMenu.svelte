@@ -16,8 +16,6 @@
     let pos = {x: 0, y: 0};   
     let remember = 15
     export function setPos(e){
-        console.log(e)
-
         pos = {x: e.x - 50, y: e.y -50}   
         let correct = {x: -160, y:-remember}
         if (e.clientY < 100 ){

@@ -1,9 +1,10 @@
 <script lang="ts">
-    import Node from "$lib/Node/Node.svelte";
+    import {NodeAdd} from "../../utils/Simulation/simulation"
+
     import {ENodeType, EConnectionType, EVariableType} from "../../utils/Node/node"
     let MenuRef: HTMLElement
 
-    let Branch = {
+    const Branch = {
         name: "Branch",
         type: ENodeType.Control,
         inputs: [
@@ -41,7 +42,7 @@
 
     }
 
-    let Fork = {
+    const Fork = {
         name: "Fork",
         type: ENodeType.Control,
         inputs: [
@@ -69,7 +70,7 @@
 
     }
 
-    let Print = {
+    const Print = {
         name: "Print",
         type: ENodeType.Function,
         inputs: [
@@ -100,8 +101,8 @@
         ],
     }
 
-    let Add = {
-        name: "+",
+    const Add = {
+        name: "Add",
         type: ENodeType.Operator,
         inputs: [
             {
@@ -140,6 +141,7 @@
                   
         ]
     }
+    
 
 
    let Nodenames = [Branch, Fork, Print, Add]
@@ -150,8 +152,6 @@
     let pos = {x: 0, y: 0};   
     let remember = 15
     export function setPos(e){
-        console.log(e)
-
         pos = {x: e.x - 50, y: e.y -50}   
         let correct = {x: -160, y:-remember}
         if (e.clientY < 100 ){
@@ -181,13 +181,8 @@
     function handleButton(e: PointerEvent, info){
         remember =  (e.y )  - (pos.y  + 50 ) //works but prefer to have the mouse on the center of the button
         MenuRef.style.display = "none"
-        console.log("aaa")
-        let grid = document.getElementById("container")
-        let node = new Node ({
-                target: grid
-            })
-        node.setNodeData(info)
-        node.setPos(pos)
+        const data = JSON.parse(JSON.stringify(info)) // clone info
+        NodeAdd(data, pos)
     }
 </script>
 

@@ -30,7 +30,7 @@ export enum EVariableType {
     STRING
 }
 
-interface SVariable {
+export interface SVariable {
     name: String;
     type: EVariableType;
     value: any;
@@ -54,7 +54,8 @@ export interface SNode {
 
 export function getColour(type, colour){
 
-    console.log(type, colour, "aa")
+
+    if(type == ENodeType.Pure) return
 
     const NodeTypeMap = new Map()
 
@@ -74,7 +75,9 @@ export function getColour(type, colour){
         primary: "#04c28f",
         secondary: "#04c28fac"
     })
-    console.log(colour == 0 ? NodeTypeMap.get(type).primary : NodeTypeMap.get(type).secondary)
+
+
+
     return colour == 0 ? NodeTypeMap.get(type).primary : NodeTypeMap.get(type).secondary
 }
 

@@ -3,9 +3,6 @@
 import ComponentDetails from '$lib/window/ComponentDetails.svelte';
 
 export let categories = [
-    {name: "Graphs", toggle: false},
-    {name: "Functions", toggle: false},
-    {name: "Macros", toggle: false},
     {name: "Variables", toggle: false},
 ]
 
@@ -21,7 +18,6 @@ const map = new Map();
 export function setMap(){
     for (const cat of categories){
         map.set(cat.name, [])
-        console.log(cat.name)
     }
 }
 

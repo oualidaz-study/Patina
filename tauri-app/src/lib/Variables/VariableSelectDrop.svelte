@@ -1,21 +1,89 @@
 <script lang="ts">
-  import NodeSet from "$lib/Node/NodeSet.svelte";
-  import NodeGet from "$lib/Node/NodeGet.svelte";
+  import {NodeAdd} from "../../utils/Simulation/simulation"
+  import {ENodeType, EConnectionType, EVariableType} from "../../utils/Node/node"
+  import { onMount } from "svelte";
     let MenuRef: HTMLElement
 
-   let Nodenames = [
-    { name: "Get", component: NodeGet},
-    { name: "Set", component: NodeSet},
-   
-   ]
-
    
 
+   const Set = {
+        name: "Set",
+        type: ENodeType.Function,
+        inputs: [
+            {
+                label: "",
+                type: EConnectionType.EXEC,
+                variable: null,
+                connectedTo: null
+            },
+            {
+                label: "X",
+                type: EConnectionType.VARIABLE,
+                variable: {
+                    name: "X",
+                    type: EVariableType.INTEGER,
+                    value: 0
+                },
+                connectedTo: null
+            },
+        ],
+        outputs: [
+            {
+                label: "",
+                type: EConnectionType.EXEC,
+                variable: null,
+                connectedTo: null
+            },
+            {
+                label: "X",
+                type: EConnectionType.VARIABLE,
+                connectedTo: null
+            },
+        ],
+        variable: {
+            name: "X",
+            type: EVariableType.INTEGER,
+            value: 0
+        },
+    }
+
+    const Get = {
+        name: "Get",
+        type: ENodeType.Function,
+        inputs: [
+            {
+                label: "",
+                type: EConnectionType.EXEC,
+                variable: null,
+                connectedTo: null
+            },
+        ],
+        outputs: [
+            {
+                label: "",
+                type: EConnectionType.EXEC,
+                variable: null,
+                connectedTo: null
+            },
+            {
+                label: "X",
+                type: EConnectionType.VARIABLE,
+                
+                connectedTo: null
+            },
+        ],
+        variable: {
+            name: "X",
+            type: EVariableType.INTEGER,
+            value: 0
+        },
+    }
+
+    let Nodenames = [Get, Set]
 
     let pos = {x: 0, y: 0};   
     let remember = 15
     export function setPos(e){
-        console.log(e)
 
         pos = {x: e.x - 50, y: e.y -50}   
         let correct = {x: -160, y:-remember}
@@ -43,16 +111,19 @@
         MenuRef.style.display = "none"
     }
 
-    function handleButton(e: PointerEvent, component){
+    function handleButton(e: PointerEvent, info){
         remember =  (e.y )  - (pos.y  + 50 ) //works but prefer to have the mouse on the center of the button
         MenuRef.style.display = "none"
-        console.log("aaa")
-        let grid = document.getElementById("container")
-        let node = new component.component ({
-                target: grid
-            })
-        node.setPos(pos)
+        const data = JSON.parse(JSON.stringify(info)) // clone info
+        NodeAdd(data, pos)
     }
+
+    export function setData(name, type){
+        Set.inputs[1].label = name
+        Set.outputs[1].label = name
+        Get.outputs[1].label = name
+    }
+
 </script>
 
 <div bind:this={MenuRef}
@@ -66,14 +137,11 @@
         class="menu"
         
     >
-        {#each Nodenames as name}
+        {#each Nodenames as info}
             <button 
-                on:pointerdown={(e) => handleButton(e, name)}
+                on:pointerdown={(e) => handleButton(e, info)}
             >
-                <div class="btnName">{name.name}</div>
-
-           
-
+                <div class="btnName">{info.name}</div>
             </button>
         {/each}
 

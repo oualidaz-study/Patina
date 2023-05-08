@@ -6,36 +6,18 @@
   import ResultsCompiler from "$lib/window/ResultsCompiler.svelte";
   import Sidebar from "$lib/window/Sidebar.svelte";
   import { onMount } from "svelte/internal";
+  import {NodeAdd} from "../utils/Simulation/simulation"
+  import PanelSide from "$lib/Panel/PanelSide.svelte";
 
   onMount(()=>{
-    let grid = document.getElementById("container")
-    let NodeStart = new Node ({
-                target: grid
-            })
+
+    NodeAdd(null, {x: 275, y: 100})
+
   })
 
 </script>
 
-
-
 <container id="container">
-  <HeaderBar />
-  <Sidebar />
+  <PanelSide />
   <Grid />
-  
-  <PanelDetails />  
 </container>
-
-<style>
-
-  container{
-    display: grid;
-    align-content: stretch;
-    justify-items: stretch;
-    grid-template-areas:
-                        "h h h"
-                        "s g d"
-                        "s g d";
-
-  }
-</style>

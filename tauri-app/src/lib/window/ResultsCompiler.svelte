@@ -4,17 +4,20 @@
 </script>
 
 
-<hb>
-    <button>Save</button>
-</hb>
+<vb>
+    <button>Console Log</button>
+    <p
+        class= "h-16"
+    >Lorem Ipsum</p>
+</vb>
     
 <style>
     
 
-    hb{
+    vb{
         grid-area: r;
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         z-index: 2;
         background-color: #242424;
         height: max-content;
