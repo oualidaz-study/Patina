@@ -34,6 +34,6 @@
     min-width: 0;
     min-height: 0;
     margin: 5px 2px;
-
+    border-radius: 5px;
   }
 </style>

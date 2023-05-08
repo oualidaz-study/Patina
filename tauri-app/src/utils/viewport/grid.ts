@@ -2,8 +2,9 @@
 
 import { prevent_default, prop_dev } from "svelte/internal";
 import ContextMenuNode from "$lib/contextMenu/NodeListMenu.svelte";
-import * as select from "./select"
+
 import * as universal from "./universal"
+import MutexZone from "$lib/Node/MutexZone.svelte";
 //canvas
 let canvas: HTMLCanvasElement
 let ctx: CanvasRenderingContext2D
@@ -38,7 +39,7 @@ let refresh = true
 export function setCanvas(_canvas:HTMLCanvasElement){
     canvas = _canvas
     ctx = canvas.getContext("2d")!
-    select.setCanvas(canvas)
+    
 }
 
 //Draw cycle
@@ -49,7 +50,7 @@ export function draw(){
     //Update layers
     updateLayerBg()
 
-    select.draw()
+    
 
     //Request Anim Frame to refresh
     requestAnimationFrame( draw )
@@ -97,16 +98,26 @@ function updateLayerNode(){
     ntx.fillRect(0, 0, 20, 20)
 }
 
+function createZone(e){
+    startPos.x = e.clientX 
+    startPos.y = e.clientY
 
-
+    let parent = document.getElementById("container")
+    zone = new MutexZone ({
+            target: parent
+    })
+    zone.Construct(startPos.x, startPos.y)
+    inZoneState = true
+}
+let zone:any 
+let inZoneState = false
+let startPos = {x: 0, y:0}
 //Handling functions
 export function onPointerDown(e:PointerEvent){
-
-    console.log(e.button)
-
     switch(e.button){
         case 0: { //LMB
-            select.rect.restart(e);
+            createZone(e)
+            
             break;
         }
         case 1: { //Mouse wheel
@@ -124,17 +135,24 @@ export function onPointerDown(e:PointerEvent){
 }
 
 export function onPointerUp(e:PointerEvent){
-    select.rect.clear();
+    
+    if(inZoneState){
+        zone.NodeSelect()
+        inZoneState = false
+        zone = null
+    }
+
     isDragging = false
     initialPinchDistance = null
     lastZoom = cameraZoom
 }
 
 export function onPointerMove(e:PointerEvent){
-    if (!isDragging) {
-        select.rect.update(e);    
-        return
+    if(inZoneState){
+        zone.DragLine(startPos.x - e.clientX, startPos.y - e.clientY)
     }
+
+    if (!isDragging)return
     cameraOffset.x = universal.getEventLocation(e)!.x/cameraZoom - dragStart.x
     cameraOffset.y = universal.getEventLocation(e)!.y/cameraZoom - dragStart.y
 }
@@ -190,7 +208,6 @@ export function contextMenu(e){
 }
 
 export function addMenu(e){
-    console.log("aa")
     if (e.keyCode != 65 || !e.shiftKey) return
     e.preventDefault()
     if (addMenuRef == null){

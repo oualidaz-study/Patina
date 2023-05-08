@@ -1,22 +1,56 @@
 
 import { readable } from 'svelte/store';
 import Node from "$lib/Node/Node.svelte";
-import type { SNode } from '../Node/node';
+import type { SNode, SVariable } from '../Node/node';
 
 
 const NodeMap = new Map<string, Node>()
 
 
 interface SToken {
-    key: String,
-    outIndex: number
+    key: string,
+    outIndex: number,
+    canMove: boolean,
+    doneAction: boolean
 }
 
 
 let Tokens:SToken[] = []
 let originToken
 
+let VariableMap= new Map<string, SVariable>()
 
+export function VariablesAdd(id, data){
+    if(data.variable){
+        VariableMap.set(data.variable.name, data.variable)
+        return 
+    }
+
+    for(const input of data.inputs){
+        const variable = input.variable
+        if (! variable) continue
+        const key = id + "_input_" + variable.name 
+        VariableMap.set(key, variable)
+    }
+    for(const output of data.outputs){
+        const variable = output.variable
+        if (! variable) continue
+        const key = id + "_output_" + variable.name 
+        VariableMap.set(key, variable)
+    }
+    
+
+}
+
+export function variableUpdate(key, newValue){
+    const variable = VariableMap.get(key)
+    variable.value = newValue
+    VariableMap.set(key, variable)
+}
+
+export function getNodeListData(){
+    
+}
 
 export function NodeAdd(info, pos){
     let parent = document.getElementById("container")
@@ -36,15 +70,12 @@ export function NodeAdd(info, pos){
 
         originToken = {
             key: node.getId(),
-            outIndex: 0
+            outIndex: 0,
+            canMove: true,
+            doneAction: false
         }
 
     }
-        
-    console.log("printed", nodeData.name)
-    console.log("printed", node.getId())
-    console.log("is", NodeMap.has(node.getId()))
-    console.log(NodeMap)
 }
 
 export function getNode(id){
@@ -54,7 +85,6 @@ export function getNode(id){
 
 export function SimulationStart(){
     Tokens = [JSON.parse(JSON.stringify(originToken))]
-    console.log("Starting Simulation !!FRONTEND")
    loop()
 }
 
@@ -62,9 +92,10 @@ export function SimulationStart(){
 
 //Evaluate Value
 function Eval(input){
-    return input.connection ? 
-              getValue(input.connection)
-            : input.value
+    if(!input.linkRef){
+        return input.variable.value
+    }
+    return input.linkRef.getVariable().value
 }
 
 function getValue(output){
@@ -82,15 +113,17 @@ function delay(ms: number) {
 
 //search in Func Library and perform action
 
-function doAction(token){
+function doAction(token: SToken){
+    
     const currentNode = NodeMap.get(token.key)?.getNodeData()
+    token.doneAction = true
     switch(currentNode.name){
         case "Branch":
             Branch(token, currentNode)
             break
 
         case "Fork": 
-            Fork() 
+            Fork(token.key) 
             break
         case "Print": 
             Print(currentNode, token.key)
@@ -98,10 +131,10 @@ function doAction(token){
         case "Add":
             return Add(currentNode.inputs)
         case "Set":
-            SetVariable(currentNode.variable.name, Eval(currentNode.inputs[1]))
+            SetVariable(currentNode.variable.name, currentNode.inputs[1], currentNode.outputs[1])
             break
         case "Get":
-            return GetVariable(currentNode.variable.name)
+            return GetVariable(currentNode.variable.name, currentNode?.outputs[1])
                                 
     }
 }
@@ -116,8 +149,8 @@ function traverse(token){
     const currentNode = NodeMap.get(token.key).getNodeData()
     const NextNode = currentNode.outputs[token.outIndex].connectedTo
     token.key = NextNode.getId()
-    console.log("traversed to", token.key, NextNode.getNodeData().name)
     token.outIndex = 0
+    token.doneAction = false
 }
 
 
@@ -126,22 +159,29 @@ function focus(name){
 
 }
 
+function canTokensTraverse(){
+    for (const t of Tokens){
+        if (t.canMove) return true
+    }
+    return false
+}
+
 //loop through tokens
 
 async function loop(){
-    let isTraversing = true
-    while(isTraversing){
+    while(canTokensTraverse()){
         for (const t of Tokens){
             focus(t.key)
-            doAction(t)
-            await delay(778)
+            if(!t.doneAction){
+                doAction(t)
+                await delay(778)
+            } 
             if (!canTraverse(t)){
-                isTraversing = false
+                t.canMove = false
                 document.getElementById(t.key)?.blur()
-                return
+                continue
             }
-            traverse(t)
-            
+            traverse(t)  
         }
     }
 }
@@ -152,16 +192,18 @@ function Branch(token:SToken, node:SNode){
     token.outIndex = node.inputs[1].variable?.value ? 0:1
 }
 
-function Fork(){
+function Fork(key){
     Tokens.push({
-        node_key: "Fork"
+        key: key,
+        outIndex: 1,
+        canMove: true,
+        doneAction: true
     })
 }
 
 function Print(node, key){
-
-    const value = node.inputs[1].variable.value 
-    console.log(key, value)
+    const value = Eval(node.inputs[1])
+    alert(value)
 }
 
 function Add(inputs){
@@ -174,10 +216,16 @@ function Add(inputs){
     return inputs.reduce("sum", 0)
 }
 
-function SetVariable(name, newValue){
-    VariableMap.set(name, newValue)
+function SetVariable(key, input, output){
+    let newValue
+    if(!input.linkRef){
+        newValue = input.variable   
+    }
+    VariableMap.set(key, newValue)
+    GetVariable(key, output)
 }
 
-function GetVariable(name){
-    return VariableMap.get(name)
+function GetVariable(key, output){
+    if(!output.linkRef) return
+    output.linkRef.setVariable(VariableMap.get(key))
 }

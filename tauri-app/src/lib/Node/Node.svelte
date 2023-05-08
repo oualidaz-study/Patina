@@ -5,11 +5,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import Link from "./ConnectionLine.svelte";
-    import {getNode} from "../../utils/Simulation/simulation"
+    import {getNode, VariablesAdd, variableUpdate} from "../../utils/Simulation/simulation"
     import { ENodeType, EConnectionType, getColour, getConnectionColour, getConnectionShape, EVariableType} from "../../utils/Node/node"
-    import { identity } from "svelte/internal";
-  import { get } from "svelte/store";
-    //Parameters
     let self:HTMLElement
 
     let data = {
@@ -29,6 +26,7 @@
             },
             
         ],
+        variable: null
     }
 
     let pos = {x: 0, y: 0}
@@ -49,7 +47,10 @@
         data.name = _data.name
         data.type = _data.type
         data.inputs = _data.inputs
-        data.outputs = _data.outputs   
+        data.outputs = _data.outputs  
+        data.variable = _data.variable 
+
+        VariablesAdd(self.id, data)
     }
 
     export function getNodeData(){
@@ -68,15 +69,47 @@
     let isDragging = false
     let delta = {x: 0, y: 0}
 
+    function linesMaintain(e){
+
+        let d = {
+            x: startPos.x - e.clientX,
+            y: startPos.y - e.clientY,
+        }    
+
+        for (const input of data.inputs){
+            if(!input.linkRef) continue
+            input.linkRef.maintainLine(d, false)
+        }
+        for (const output of data.outputs){
+            if(!output.linkRef) continue
+            output.linkRef.maintainLine(d, true)
+        }
+    }
+
+    function linesMaintainUpdate(e){
+
+        for (const input of data.inputs){
+            if(!input.linkRef) continue
+            input.linkRef.setPrevPosition(false)
+        }
+        for (const output of data.outputs){
+            if(!output.linkRef) continue
+            output.linkRef.setPrevPosition(true)
+        }
+    }
+    
+
     function onPointerDown(e){
-        if(isLink) {
+        if(inLinkState) {
             return
         }
 
         isDragging = true
         delta.x = pos.x - e.clientX
         delta.y = pos.y - e.clientY
-    
+        //set StartPosition for the Link
+        startPos.x = e.clientX
+        startPos.y = e.clientY
         onPointerMove(e)
     }
 
@@ -84,121 +117,111 @@
         if(!isDragging)return
         pos.x = e.clientX + delta.x
         pos.y = e.clientY + delta.y
-
-        if(!curve)return
-        console.log(pos)
-        curve.maintainLine(startPos.x , delta.y)
+        linesMaintain(e)
     }
 
     function onPointerUp(e){
-        if(isLink) {
-            console.log("hey")
+        if(inLinkState) {
             return
         }
         isDragging = false
+        linesMaintainUpdate()
     }
 
     
     //curve
-    let isLink = false;
+    let inLinkState = false;
     let startPos = {x: 0, y:0}
     let endPos = {x: 0, y:0}
-    let btnRef
-    let curve
+    let link: any
 
-    let connection = {
-        input: {
-            index: -1,
-            ref: null
-        },
-        output: {
-            index: -1,
-            ref: null
-        }
+
+    function createLink(parent){
+        link = new Link ({
+                target: parent
+        })
+        link.Construct(startPos.x - pos.x, startPos.y -pos.y)
+        link.setConnection(getNode(self.id), parent, link)
     }
 
-    function setConnection(connectionId, node){
-        if (connectionId.includes("output")){
-            connection.output.index = Number(connectionId.replace(/\D/g,''))
-            connection.output.ref = node
-        }
-        else{
-            connection.input.index = Number(connectionId.replace(/\D/g,''))
-            connection.input.ref = node
-        }
-    }
-
-    function updateNodeConnection(linkRef){
-        const inputNode = connection.input.ref
+    function getLink(btnRef){
         
-        const outputNode = connection.output.ref
+        const id = btnRef.parentNode.id
+        const isOutput = id.includes("output")
+        const index = Number(id.replace(/\D/g,''))
 
-        const targetInput = inputNode.getNodeData().inputs[connection.input.index]
-        const targetOuput = outputNode.getNodeData().outputs[connection.output.index]
-
-        targetInput.connectedTo = outputNode
-        targetOuput.connectedTo = inputNode
-
-        targetInput.linkRef = linkRef
-        targetOuput.linkRef = linkRef
+       return isOutput ? data.outputs[index].linkRef : data.inputs[index].linkRef
     }
 
     function onLinkPointerDown(e){
-        isLink=true
-        btnRef = e.target
-        btnRef.style.backgroundColor= "#ffffff"
+
+        //set State to Link
+        inLinkState=true
+
+        //set StartPosition for the Link
         startPos.x = e.clientX
         startPos.y = e.clientY
-        let grid = document.getElementById("container")
-        curve = new Link ({
-                target: e.target
-        })
-        curve.Construct(startPos.x - pos.x, startPos.y -pos.y)
 
-        const selfNode = getNode(self.id)
-
-        setConnection(btnRef.parentNode.id, selfNode)
-
-        onLinkPointerMove(e, curve)
+        //Create Link Component and set the connection
+        if(getLink(e.target)){
+            getLink(e.target).$destroy()
+        }
+        createLink(e.target)
+        
+        
+        onLinkPointerMove(e)
         
     }
 
     function onLinkPointerMove(e){
-        if (!isLink) return
-        
-        
+        if (!inLinkState || !link) return
         
         endPos.x =  e.clientX - startPos.x 
         endPos.y =  e.clientY - startPos.y 
         
-        curve.DragLine(endPos.x, endPos.y)
+        link.DragLine(endPos.x, endPos.y)
     }
 
 
     function onLinkPointerUp(e){
-        if (!btnRef || data.outputs[0].connectedTo) return
-        isLink = false
+        if (!link) return
+        
+        inLinkState = false
 
-        if(e.target.id === "link"){
-            e.target.style.backgroundColor= "#ffffff"
-            
+        if(e.target.id === "link" && link.checkPin(e.target)){
             
             let targetNode = getNode(e.target.offsetParent.id)
-            
-            setConnection(e.target.parentNode.id, targetNode)
-            console.log(connection)
-            updateNodeConnection(curve)
-            curve = null
+        
+            link.setConnection(targetNode, e.target, link)
+            link.linkNodes()
+            link = null
             return
         }
         
-        
-        btnRef.style.backgroundColor= "#110f0e"
-        if(curve == null) return
+        link.$destroy()
+        link = null
 
     }
 
     const id = data.name + '_'  + makeid(5)
+
+
+    function findConnection(id){
+        const index = id.split('_')[1]
+        return id.match("input") ?  data.inputs[index].variable : data.outputs[index].variable 
+    }
+    
+    function handleOnChange(e){
+    
+        const id = e.target.parentNode.id
+        const variable =findConnection(id)
+        const key = self.id + (id.match("input") ? "_in" : "_out") + "put_" + variable.name
+        const newValue = variable.value
+        if(!data.variable)
+            variableUpdate(key, newValue)
+        
+    }
+
     onMount(()=>{
     })
     
@@ -231,7 +254,7 @@
 >   
 
 
-    {#if data.type != ENodeType.Operator}
+    {#if data.type != ENodeType.Operator && data.type != ENodeType.Pure }
         <p 
             class={`
                 px-2  
@@ -284,10 +307,11 @@
                         bind:checked={input.variable.value}
                     >
                     {/if}
-                    {#if input.variable.type == EVariableType.STRING}
+                    {#if input.variable.type == EVariableType.STRING && !input.linkRef }
                     <input 
                         type="text" 
                         bind:value= {input.variable.value}
+                        on:change={(e)=>{handleOnChange(e)}}
                         class="
                             w-12 bg-[#0000001f] rounded-sm
                             outline outline-1 outline-slate-400
@@ -296,10 +320,12 @@
                         "
                     />
                     {/if}
-                    {#if input.variable.type == EVariableType.INTEGER}
+                    {#if input.variable.type == EVariableType.INTEGER || (input.type == EConnectionType.VARIABLE && data.variable == EVariableType.INTEGER)}
                     <input 
-                        type="text" 
-                        value= {input.variable.value}
+                        type="number" 
+                        id={self.id + "_input_" + data.variable.name }
+                        bind:value= {input.variable.value}
+                        on:change={(e)=>{handleOnChange(e)}}
                         class=" justify-center
                             w-5 h-5 bg-[#0000001f] rounded-sm
                             outline outline-1 outline-slate-400
@@ -329,7 +355,7 @@
                     id="link"
                     class="exec place-self-center"
                     style="
-                        outline-color:{getConnectionColour(output.variable)};
+                        outline-color:{getConnectionColour(data.variable && output.type == EConnectionType.VARIABLE ? data.variable : output.variable)};
                         border-radius: {getConnectionShape(output.type)};
                         "
                     on:pointerdown={(e)=>{onLinkPointerDown(e)}}
@@ -355,5 +381,17 @@
     outline-width: 2px;
     background-color: #110f0e;
     padding: 0px;
+}
+
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
 }
 </style>

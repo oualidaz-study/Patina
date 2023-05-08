@@ -4,7 +4,7 @@
 
 
     let name = "NewVar"
-    let type = "Boolean"
+    let type = "Integer"
     let isDragging = false
     let pos = {x: 0, y: 0}
     let toolTipRef: Tooltip
@@ -40,8 +40,8 @@
             let node = new VariableSelectDrop ({
                 target: e.target.parentNode
             })
+            node.setData(name, type)
             node.setPos(pos)
-            console.log(e.target)
         }
 
         
@@ -65,7 +65,7 @@
     id="main"
     on:pointerdown={(e)=>onPointerDown(e)}
     
-    title= "Boolean"
+    title= "Integer"
 >
     {name}
     <button 
