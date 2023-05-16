@@ -14,9 +14,28 @@ interface SToken {
     doneAction: boolean
 }
 
+export enum ESimulationOption {
+    Sequential = "Sequential",
+    Random = "Random", 
+    Manual = "Manual"
+}
+
 
 let Tokens:SToken[] = []
 let originToken
+
+
+let current_sim_option: ESimulationOption = ESimulationOption.Sequential
+
+export function getCurrentSimOption(){
+    return current_sim_option
+}
+
+export function setCurrentSimOption(newOption:string){
+    return current_sim_option =  ESimulationOption[newOption] 
+}
+
+
 
 let VariableMap= new Map<string, SVariable>()
 
@@ -160,34 +179,79 @@ function focus(name){
 }
 
 function canTokensTraverse(){
+    console.log("check", Tokens)
     for (const t of Tokens){
         if (t.canMove) return true
     }
+    console.log("finish", Tokens)
     return false
 }
 
-//loop through tokens
-
-async function loop(){
-    while(canTokensTraverse()){
-        for (const t of Tokens){
-            focus(t.key)
-            if(!t.doneAction){
-                doAction(t)
-                await delay(778)
-            } 
-            if (!canTraverse(t)){
-                t.canMove = false
-                document.getElementById(t.key)?.blur()
-                continue
-            }
-            traverse(t)  
-        }
+function shuffle(array) {
+    let currentIndex = array.length,  randomIndex;
+  
+    // While there remain elements to shuffle.
+    while (currentIndex != 0) {
+  
+      // Pick a remaining element.
+      randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+  
+      // And swap it with the current element.
+      [array[currentIndex], array[randomIndex]] = [
+        array[randomIndex], array[currentIndex]];
     }
+    console.log("shuffle", array)
+    return array;
 }
 
-//Function Library
+async function performAction(t){
+    console.log(t)
+    focus(t.key)
+    if(!t.doneAction){
+        doAction(t)
+        await delay(778)
+    } 
+    if (!canTraverse(t)){
+        t.canMove = false
+        document.getElementById(t.key)?.blur()
+        return
+    }
+    traverse(t)  
+}
 
+async function loopSequential(){
+    //for each token
+    for (const t of Tokens)
+        await performAction(t)
+}
+
+async function loopRandom(){
+    await shuffle(Tokens)
+    await loopSequential()
+}
+
+async function loopManual(){
+    //TODO
+}
+
+async function loop() {
+    console.log("start sim")
+    while(canTokensTraverse()){
+        if (current_sim_option === ESimulationOption.Sequential)
+            await loopSequential()
+        if (current_sim_option === ESimulationOption.Random)
+            await loopRandom()
+        if (current_sim_option === ESimulationOption.Manual)
+            await loopManual()
+    }
+    console.log("finish", Tokens)
+    // do something else here after firstFunction completes
+  }
+
+
+
+//Function Library_____________________________________________________________
 function Branch(token:SToken, node:SNode){
     token.outIndex = node.inputs[1].variable?.value ? 0:1
 }
@@ -199,11 +263,12 @@ function Fork(key){
         canMove: true,
         doneAction: true
     })
+    
 }
 
 function Print(node, key){
     const value = Eval(node.inputs[1])
-    alert(value)
+    console.log(value)
 }
 
 function Add(inputs){

@@ -53,7 +53,6 @@
 
     function getColour(isOutput){
         let pin = isOutput ? connection.output : connection.input
-        console.log(isOutput, pin.btnRef)
         if (!pin.btnRef){
             pin = isOutput ? connection.input : connection.output
         }
@@ -101,7 +100,8 @@
            const inputbox = document.getElementById(id)?.querySelector('input')
            if(!inputbox) return
            inputbox.style.visibility = "hidden"
-        }    
+        }
+        console.log("set", connection)    
         draw()
     }
 
